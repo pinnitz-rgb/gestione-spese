@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1769aa">
+  <title>Gestione spese</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f3f6fa;
+      color: #17202a;
+    }
+
+    header {
+      background: #1769aa;
+      color: white;
+      padding: 22px 16px;
+    }
+
+    main {
+      max-width: 700px;
+      margin: auto;
+      padding: 14px;
+    }
+
+    section {
+      background: white;
+      padding: 16px;
+      margin-bottom: 14px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px #0002;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    input,
+    select {
+      border: 1px solid #ccd6e0;
+      background: white;
+    }
+
+    button {
+      border: 0;
+      background: #1769aa;
+      color: white;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .summary div {
+      padding: 12px;
+      background: #eef5fb;
+      border-radius: 10px;
+    }
+
+    .movement {
+      border-top: 1px solid #ddd;
+      padding: 12px 0;
+    }
+
+    .positive {
+      color: green;
+    }
+
+    .negative {
+      color: #c62828;
+    }
+
+    small {
+      color: #687782;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Gestione spese</h1>
+    <div>Entrate, uscite e scadenze</div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Riepilogo</h2>
+
+      <div class="summary">
+        <div>
+          Saldo mese<br>
+          <strong id="saldo">0,00 €</strong>
+        </div>
+
+        <div>
+          Da pagare<br>
+          <strong id="daPagare">0,00 €</strong>
+        </div>
+
+        <div>
+          Entrate<br>
+          <strong id="entrate">0,00 €</strong>
+        </div>
+
+        <div>
+          Uscite<br>
+          <strong id="uscite">0,00 €</strong>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Nuovo movimento</h2>
+
+      <button id="parla">🎙️ Inserisci con la voce</button>
+      <p id="statoVoce"><small></small></p>
+
+      <input id="descrizione" placeholder="Descrizione">
+      <input id="importo" type="number" step="0.01" placeholder="Importo">
+
+      <div class="grid">
+        <select id="tipo">
+          <option value="uscita">Uscita</option>
+          <option value="entrata">Entrata</option>
+        </select>
+
+        <select id="stato">
+          <option value="pagato">Pagato</option>
+          <option value="da_pagare">Da pagare</option>
+        </select>
+      </div>
+
+      <div class="grid">
+        <input id="data" type="date">
+        <input id="categoria" placeholder="Categoria">
+      </div>
+
+      <input id="metodo" placeholder="Metodo: carta, contanti, conto">
+
+      <label>
+        <input id="ricorrente" type="checkbox">
+        Movimento ricorrente mensile
+      </label>
+
+      <button id="salva">Salva movimento</button>
+    </section>
+
+    <section>
+      <h2>Movimenti</h2>
+      <input id="cerca" placeholder="Cerca movimento o categoria">
+      <div id="elenco"></div>
+    </section>
+  </main>
+
+  <script>
+    const chiave = "gestione_spese_v1";
+    let movimenti = JSON.parse(localStorage.getItem(chiave) || "[]");
+
+    const euro = valore =>
+      Number(valore || 0).toLocaleString("it-IT", {
+        style: "currency",
+        currency: "EUR"
+      });
+
+    const oggi = new Date().toISOString().slice(0, 10);
+    document.getElementById("data").value = oggi;
+
+    function aggiorna() {
+      const mese = new Date().toISOString().slice(0, 7);
+      const ricerca = document
+        .getElementById("cerca")
+        .value
+        .toLowerCase();
+
+      const entrate = movimenti
+        .filter(m => m.tipo === "entrata" && m.data.startsWith(mese))
+        .reduce((totale, m) => totale + Number(m.importo), 0);
+
+      const uscite = movimenti
+        .filter(m =>
+          m.tipo === "uscita" &&
+          m.stato === "pagato" &&
+          m.data.startsWith(mese)
+        )
+        .reduce((totale, m) => totale + Number(m.importo), 0);
+
+      const daPagare = movimenti
+        .filter(m => m.tipo === "uscita" && m.stato === "da_pagare")
+        .reduce((totale, m) => totale + Number(m.importo), 0);
+
+      document.getElementById("saldo").textContent = euro(entrate - uscite);
+      document.getElementById("entrate").textContent = euro(entrate);
+      document.getElementById("uscite").textContent = euro(uscite);
+      document.getElementById("daPagare").textContent = euro(daPagare);
+
+      const filtrati = movimenti.filter(m =>
+        `${m.descrizione} ${m.categoria}`
+          .toLowerCase()
+          .includes(ricerca)
+      );
+
+      document.getElementById("elenco").innerHTML =
+        filtrati
+          .sort((a, b) => b.data.localeCompare(a.data))
+          .map(m => `
+            <div class="movement">
+              <strong>${m.descrizione || "Senza descrizione"}</strong><br>
+              <small>
+                ${m.data} · ${m.categoria || "Altro"} ·
+                ${m.stato === "da_pagare" ? "Da pagare" : "Pagato"}
+                ${m.ricorrente ? " · Ricorrente" : ""}
+              </small>
+              <br>
+              <strong class="${m.tipo === "entrata" ? "positive" : "negative"}">
+                ${m.tipo === "entrata" ? "+" : "-"}${euro(m.importo)}
+              </strong>
+            </div>
+          `)
+          .join("") || "<small>Nessun movimento.</small>";
+    }
+
+    document.getElementById("salva").onclick = () => {
+      const movimento = {
+        descrizione: document.getElementById("descrizione").value,
+        importo: document.getElementById("importo").value,
+        tipo: document.getElementById("tipo").value,
+        stato: document.getElementById("stato").value,
+        data: document.getElementById("data").value,
+        categoria: document.getElementById("categoria").value,
+        metodo: document.getElementById("metodo").value,
+        ricorrente: document.getElementById("ricorrente").checked
+      };
+
+      if (!movimento.importo || !movimento.data) {
+        alert("Inserisci importo e data.");
+        return;
+      }
+
+      movimenti.push(movimento);
+      localStorage.setItem(chiave, JSON.stringify(movimenti));
+
+      document.getElementById("descrizione").value = "";
+      document.getElementById("importo").value = "";
+      document.getElementById("categoria").value = "";
+      document.getElementById("metodo").value = "";
+      document.getElementById("ricorrente").checked = false;
+
+      aggiorna();
+    };
+
+    document.getElementById("cerca").oninput = aggiorna;
+
+    document.getElementById("parla").onclick = () => {
+      const Riconoscimento =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+      if (!Riconoscimento) {
+        alert("Il riconoscimento vocale non è disponibile in questo browser. Usa Chrome.");
+        return;
+      }
+
+      const riconoscimento = new Riconoscimento();
+      riconoscimento.lang = "it-IT";
+      riconoscimento.interimResults = false;
+
+      document.getElementById("statoVoce").textContent =
+        "Ascolto in corso...";
+
+      riconoscimento.onresult = evento => {
+        const testo =
+          evento.results[0][0].transcript;
+
+        document.getElementById("descrizione").value = testo;
+
+        const trovato = testo.match(
+          /([0-9]+(?:[,.][0-9]+)?)\\s*(euro|€)?/i
+        );
+
+        if (trovato) {
+          document.getElementById("importo").value =
+            trovato[1].replace(",", ".");
+        }
+
+        if (/ricevuto|incassato|stipendio|entrata/i.test(testo)) {
+          document.getElementById("tipo").value = "entrata";
+        } else {
+          document.getElementById("tipo").value = "uscita";
+        }
+
+        if (/devo pagare|da pagare|scadenza/i.test(testo)) {
+          document.getElementById("stato").value = "da_pagare";
+        }
+
+        document.getElementById("statoVoce").textContent =
+          "Testo riconosciuto: " + testo;
+      };
+
+      riconoscimento.onerror = () => {
+        document.getElementById("statoVoce").textContent =
+          "Non ho riconosciuto la frase.";
+      };
+
+      riconoscimento.start();
+    };
+
+    aggiorna();
+  </script>
+</body>
+</html>
