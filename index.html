@@ -335,9 +335,12 @@
     );
   }
 
-  const trovato = frase.match(
-    /(?:€|euro)?s*(d+(?:[,.]d{1,2})?)/i
-  );
+  const importoRiconosciuto = estraiImporto(testo);
+
+if (importoRiconosciuto) {
+  document.getElementById("importo").value =
+    importoRiconosciuto;
+}
 
   if (!trovato) return "";
 
