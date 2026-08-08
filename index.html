@@ -1,1 +1,1138 @@
 Crea nuova base dell'app Gestione
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123b5d">
+  <meta name="description" content="Gestione semplice delle finanze personali">
+  <title>Gestione</title>
+
+  <style>
+    :root {
+      --blu: #123b5d;
+      --azzurro: #2d8197;
+      --sfondo: #f4f0e8;
+      --bianco: #ffffff;
+      --testo: #173042;
+      --secondario: #60737d;
+      --verde: #18794e;
+      --rosso: #b42318;
+      --arancio: #a15c00;
+      --bordo: #d9e2e5;
+      --ombra: 0 4px 16px rgba(18, 59, 93, .12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--sfondo);
+      color: var(--testo);
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      padding: 26px 18px;
+      background: var(--blu);
+      color: var(--bianco);
+    }
+
+    header h1 {
+      max-width: 900px;
+      margin: 0 auto 6px;
+      font-size: 30px;
+    }
+
+    header p {
+      max-width: 900px;
+      margin: auto;
+      opacity: .9;
+    }
+
+    main {
+      width: min(100% - 24px, 900px);
+      margin: auto;
+      padding: 16px 0 40px;
+    }
+
+    section {
+      margin-bottom: 16px;
+      padding: 18px;
+      background: var(--bianco);
+      border-radius: 18px;
+      box-shadow: var(--ombra);
+    }
+
+    h2 {
+      margin: 0 0 15px;
+      font-size: 21px;
+    }
+
+    h3 {
+      margin: 22px 0 10px;
+      font-size: 17px;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .card {
+      min-height: 105px;
+      padding: 15px;
+      border-left: 6px solid var(--azzurro);
+      border-radius: 14px;
+      background: #eef6f6;
+    }
+
+    .card.saldo {
+      border-left-color: var(--blu);
+      background: #e9f1f6;
+    }
+
+    .card.entrate {
+      border-left-color: var(--verde);
+      background: #eaf7ef;
+    }
+
+    .card.uscite {
+      border-left-color: var(--rosso);
+      background: #fff0ee;
+    }
+
+    .card.scadenze {
+      border-left-color: var(--arancio);
+      background: #fff4df;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--secondario);
+      font-size: 13px;
+    }
+
+    .valore {
+      font-size: 21px;
+      font-weight: bold;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      color: var(--secondario);
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      font: inherit;
+    }
+
+    input,
+    select {
+      margin-top: 6px;
+      padding: 13px;
+      border: 1px solid #b7c8d0;
+      border-radius: 10px;
+      background: var(--bianco);
+      color: var(--testo);
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 13px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--azzurro);
+      color: var(--bianco);
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      filter: brightness(.95);
+    }
+
+    button:active {
+      transform: scale(.98);
+    }
+
+    .primary {
+      background: var(--blu);
+    }
+
+    .secondary {
+      background: #e7eff1;
+      color: var(--blu);
+    }
+
+    .danger {
+      width: auto;
+      margin: 0;
+      padding: 7px 10px;
+      background: #fff0ee;
+      color: var(--rosso);
+      font-size: 13px;
+    }
+
+    .edit {
+      width: auto;
+      margin: 0 5px 0 0;
+      padding: 7px 10px;
+      background: #e9f1f6;
+      color: var(--blu);
+      font-size: 13px;
+    }
+
+    .azioni {
+      display: flex;
+      justify-content: flex-end;
+      gap: 5px;
+      margin-top: 9px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 15px;
+      color: var(--testo);
+      font-weight: normal;
+    }
+
+    .check input {
+      width: auto;
+      margin: 0;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .movimento {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 1px solid var(--bordo);
+    }
+
+    .movimento:first-child {
+      border-top: 0;
+    }
+
+    .movimento-main {
+      min-width: 0;
+    }
+
+    .titolo {
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .info {
+      margin-top: 5px;
+      color: var(--secondario);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .destra {
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .importo {
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .positivo {
+      color: var(--verde);
+    }
+
+    .negativo {
+      color: var(--rosso);
+    }
+
+    .avviso {
+      color: var(--arancio);
+    }
+
+    .vuoto,
+    .stato {
+      color: var(--secondario);
+      font-size: 14px;
+    }
+
+    .barra-riga {
+      margin: 12px 0;
+    }
+
+    .barra-testo {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .barra {
+      height: 11px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #e7eeee;
+    }
+
+    .barra-piena {
+      height: 100%;
+      border-radius: 20px;
+      background: var(--azzurro);
+    }
+
+    .backup {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .file-nascosto {
+      display: none;
+    }
+
+    @media (max-width: 700px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .dashboard,
+      .form-grid,
+      .toolbar,
+      .backup {
+        grid-template-columns: 1fr;
+      }
+
+      .movimento {
+        align-items: flex-start;
+      }
+
+      .destra {
+        max-width: 45%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Gestione</h1>
+    <p>Le tue finanze personali, in modo semplice</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Riepilogo del mese</h2>
+
+      <div class="dashboard">
+        <div class="card saldo">
+          <span class="label">Saldo</span>
+          <span id="saldo" class="valore">0,00 €</span>
+        </div>
+
+        <div class="card entrate">
+          <span class="label">Entrate</span>
+          <span id="entrate" class="valore">0,00 €</span>
+        </div>
+
+        <div class="card uscite">
+          <span class="label">Uscite</span>
+          <span id="uscite" class="valore">0,00 €</span>
+        </div>
+
+        <div class="card scadenze">
+          <span class="label">Da pagare</span>
+          <span id="scadenze" class="valore">0,00 €</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 id="titolo-form">Aggiungi movimento</h2>
+
+      <form id="form-movimento">
+        <div class="form-grid">
+          <label>
+            Tipo
+            <select id="tipo">
+              <option value="uscita">Uscita</option>
+              <option value="entrata">Entrata</option>
+            </select>
+          </label>
+
+          <label>
+            Importo
+            <input
+              id="importo"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0,00"
+              required>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Descrizione
+            <input
+              id="descrizione"
+              type="text"
+              maxlength="120"
+              placeholder="Esempio: Supermercato"
+              required>
+          </label>
+
+          <label>
+            Data
+            <input id="data" type="date" required>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Categoria
+            <select id="categoria">
+              <option value="Alimentari">Alimentari</option>
+              <option value="Casa">Casa</option>
+              <option value="Trasporti">Trasporti</option>
+              <option value="Ristorazione">Ristorazione</option>
+              <option value="Utenze">Utenze</option>
+              <option value="Salute">Salute</option>
+              <option value="Tempo libero">Tempo libero</option>
+              <option value="Stipendio">Stipendio</option>
+              <option value="Altro">Altro</option>
+            </select>
+          </label>
+
+          <label>
+            Stato
+            <select id="stato">
+              <option value="pagato">Pagato</option>
+              <option value="da_pagare">Da pagare</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Metodo di pagamento
+            <select id="metodo">
+              <option value="">Non specificato</option>
+              <option value="Contanti">Contanti</option>
+              <option value="Carta">Carta</option>
+              <option value="Bonifico">Bonifico</option>
+              <option value="Addebito diretto">Addebito diretto</option>
+            </select>
+          </label>
+
+          <label class="check">
+            <input id="ricorrente" type="checkbox">
+            Movimento ricorrente mensile
+          </label>
+        </div>
+
+        <button id="salva" class="primary" type="submit">
+          Salva movimento
+        </button>
+
+        <button
+          id="annulla"
+          class="secondary"
+          type="button"
+          hidden>
+          Annulla modifica
+        </button>
+      </form>
+
+      <p id="messaggio" class="stato"></p>
+    </section>
+
+    <section>
+      <h2>Movimenti</h2>
+
+      <div class="toolbar">
+        <input
+          id="ricerca"
+          type="search"
+          placeholder="Cerca...">
+
+        <select id="filtro-tipo">
+          <option value="tutti">Tutti</option>
+          <option value="entrata">Entrate</option>
+          <option value="uscita">Uscite</option>
+        </select>
+
+        <select id="filtro-stato">
+          <option value="tutti">Ogni stato</option>
+          <option value="pagato">Pagati</option>
+          <option value="da_pagare">Da pagare</option>
+        </select>
+      </div>
+
+      <div id="elenco"></div>
+    </section>
+
+    <section>
+      <h2>Statistiche</h2>
+      <div id="statistiche"></div>
+    </section>
+
+    <section>
+      <h2>Backup</h2>
+
+      <div class="backup">
+        <button id="esporta" type="button">
+          Esporta JSON
+        </button>
+
+        <button
+          id="importa"
+          class="secondary"
+          type="button">
+          Importa JSON
+        </button>
+      </div>
+
+      <input
+        id="file"
+        class="file-nascosto"
+        type="file"
+        accept="application/json">
+
+      <p class="stato">
+        I dati di questa prima versione sono salvati nel browser.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const CHIAVE = "gestione_plus_movimenti_v1";
+
+    let movimenti = carica();
+
+    let indiceModifica = null;
+
+    const $ = id =>
+      document.getElementById(id);
+
+    function oggi() {
+      const data = new Date();
+      const anno = data.getFullYear();
+      const mese = String(
+        data.getMonth() + 1
+      ).padStart(2, "0");
+      const giorno = String(
+        data.getDate()
+      ).padStart(2, "0");
+
+      return `${anno}-${mese}-${giorno}`;
+    }
+
+    function euro(valore) {
+      return Number(valore || 0).toLocaleString(
+        "it-IT",
+        {
+          style: "currency",
+          currency: "EUR"
+        }
+      );
+    }
+
+    function carica() {
+      try {
+        const dati = JSON.parse(
+          localStorage.getItem(CHIAVE) || "[]"
+        );
+
+        return Array.isArray(dati)
+          ? dati
+          : [];
+      } catch (errore) {
+        console.error(
+          "Dati locali non validi:",
+          errore
+        );
+
+        return [];
+      }
+    }
+
+    function salva() {
+      localStorage.setItem(
+        CHIAVE,
+        JSON.stringify(movimenti)
+      );
+    }
+
+    function creaMovimento(dati) {
+      return {
+        id: dati.id || (
+          Date.now() + "-" +
+          Math.random().toString(16).slice(2)
+        ),
+        tipo: dati.tipo,
+        importo: Number(dati.importo),
+        descrizione: dati.descrizione.trim(),
+        data: dati.data,
+        categoria: dati.categoria,
+        stato: dati.stato,
+        metodo: dati.metodo,
+        ricorrente: Boolean(dati.ricorrente),
+        creatoIl: dati.creatoIl ||
+          new Date().toISOString(),
+        aggiornatoIl:
+          new Date().toISOString()
+      };
+    }
+
+    function aggiornaDashboard() {
+      const mese = oggi().slice(0, 7);
+
+      const entrate = movimenti
+        .filter(m =>
+          m.tipo === "entrata" &&
+          m.data.startsWith(mese)
+        )
+        .reduce((totale, m) =>
+          totale + Number(m.importo), 0);
+
+      const uscite = movimenti
+        .filter(m =>
+          m.tipo === "uscita" &&
+          m.stato === "pagato" &&
+          m.data.startsWith(mese)
+        )
+        .reduce((totale, m) =>
+          totale + Number(m.importo), 0);
+
+      const scadenze = movimenti
+        .filter(m =>
+          m.tipo === "uscita" &&
+          m.stato === "da_pagare" &&
+          m.data >= oggi()
+        )
+        .reduce((totale, m) =>
+          totale + Number(m.importo), 0);
+
+      $("saldo").textContent =
+        euro(entrate - uscite);
+
+      $("entrate").textContent =
+        euro(entrate);
+
+      $("uscite").textContent =
+        euro(uscite);
+
+      $("scadenze").textContent =
+        euro(scadenze);
+
+      aggiornaStatistiche(entrate, uscite);
+    }
+
+    function aggiornaStatistiche(entrate, uscite) {
+      const mese = oggi().slice(0, 7);
+      const categorie = {};
+
+      movimenti
+        .filter(m =>
+          m.tipo === "uscita" &&
+          m.stato === "pagato" &&
+          m.data.startsWith(mese)
+        )
+        .forEach(m => {
+          const categoria =
+            m.categoria || "Altro";
+
+          categorie[categoria] =
+            (categorie[categoria] || 0) +
+            Number(m.importo);
+        });
+
+      const ordinate = Object.entries(categorie)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+
+      let html = `
+        <div class="barra-riga">
+          <div class="barra-testo">
+            <span>Entrate del mese</span>
+            <strong class="positivo">${euro(entrate)}</strong>
+          </div>
+          <div class="barra">
+            <div
+              class="barra-piena"
+              style="width:${entrate ? 100 : 0}%;background:#18794e">
+            </div>
+          </div>
+        </div>
+
+        <div class="barra-riga">
+          <div class="barra-testo">
+            <span>Uscite del mese</span>
+            <strong class="negativo">${euro(uscite)}</strong>
+          </div>
+          <div class="barra">
+            <div
+              class="barra-piena"
+              style="width:${uscite ? 100 : 0}%;background:#b42318">
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (!ordinate.length) {
+        html += `
+          <p class="vuoto">
+            Inserisci alcuni movimenti per vedere le statistiche.
+          </p>
+        `;
+      } else {
+        html += "<h3>Uscite per categoria</h3>";
+
+        const massimo = ordinate[0][1] || 1;
+
+        ordinate.forEach(([categoria, valore]) => {
+          html += `
+            <div class="barra-riga">
+              <div class="barra-testo">
+                <span>${testoSicuro(categoria)}</span>
+                <strong>${euro(valore)}</strong>
+              </div>
+              <div class="barra">
+                <div
+                  class="barra-piena"
+                  style="width:${(valore / massimo) * 100}%">
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      $("statistiche").innerHTML = html;
+    }
+
+    function testoSicuro(valore) {
+      return String(valore)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function aggiornaElenco() {
+      const ricerca = $("ricerca")
+        .value
+        .toLowerCase()
+        .trim();
+
+      const tipo = $("filtro-tipo").value;
+      const stato = $("filtro-stato").value;
+
+      const filtrati = movimenti
+        .map((movimento, indice) => ({
+          movimento,
+          indice
+        }))
+        .filter(({ movimento }) => {
+          const testo = [
+            movimento.descrizione,
+            movimento.categoria,
+            movimento.metodo
+          ]
+            .join(" ")
+            .toLowerCase();
+
+          const corrispondeRicerca =
+            testo.includes(ricerca);
+
+          const corrispondeTipo =
+            tipo === "tutti" ||
+            movimento.tipo === tipo;
+
+          const corrispondeStato =
+            stato === "tutti" ||
+            movimento.stato === stato;
+
+          return (
+            corrispondeRicerca &&
+            corrispondeTipo &&
+            corrispondeStato
+          );
+        })
+        .sort((a, b) =>
+          b.movimento.data.localeCompare(
+            a.movimento.data
+          )
+        );
+
+      const elenco = $("elenco");
+      elenco.innerHTML = "";
+
+      if (!filtrati.length) {
+        elenco.innerHTML =
+          `<p class="vuoto">Nessun movimento trovato.</p>`;
+        return;
+      }
+
+      filtrati.forEach(({ movimento, indice }) => {
+        const riga =
+          document.createElement("div");
+        riga.className = "movimento";
+
+        const principale =
+          document.createElement("div");
+        principale.className = "movimento-main";
+
+        const titolo =
+          document.createElement("div");
+        titolo.className = "titolo";
+        titolo.textContent =
+          movimento.descrizione ||
+          "Senza descrizione";
+
+        const info =
+          document.createElement("div");
+        info.className = "info";
+
+        const stato = movimento.stato ===
+          "da_pagare"
+          ? "Da pagare"
+          : "Pagato";
+
+        info.textContent = [
+          movimento.data,
+          movimento.categoria || "Altro",
+          stato,
+          movimento.metodo || "",
+          movimento.ricorrente
+            ? "Ricorrente mensile"
+            : ""
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        principale.appendChild(titolo);
+        principale.appendChild(info);
+
+        const destra =
+          document.createElement("div");
+        destra.className = "destra";
+
+        const valore =
+          document.createElement("div");
+        valore.className =
+          "importo " +
+          (
+            movimento.tipo === "entrata"
+              ? "positivo"
+              : "negativo"
+          );
+
+        valore.textContent =
+          (
+            movimento.tipo === "entrata"
+              ? "+"
+              : "-"
+          ) + euro(movimento.importo);
+
+        const azioni =
+          document.createElement("div");
+        azioni.className = "azioni";
+
+        const modifica =
+          document.createElement("button");
+        modifica.className = "edit";
+        modifica.type = "button";
+        modifica.textContent = "Modifica";
+        modifica.onclick = () =>
+          preparaModifica(indice);
+
+        const elimina =
+          document.createElement("button");
+        elimina.className = "danger";
+        elimina.type = "button";
+        elimina.textContent = "Elimina";
+        elimina.onclick = () =>
+          eliminaMovimento(indice);
+
+        azioni.appendChild(modifica);
+        azioni.appendChild(elimina);
+
+        destra.appendChild(valore);
+        destra.appendChild(azioni);
+
+        riga.appendChild(principale);
+        riga.appendChild(destra);
+        elenco.appendChild(riga);
+      });
+    }
+
+    function aggiorna() {
+      aggiornaDashboard();
+      aggiornaElenco();
+    }
+
+    function pulisciForm() {
+      $("form-movimento").reset();
+      $("data").value = oggi();
+      $("titolo-form").textContent =
+        "Aggiungi movimento";
+      $("salva").textContent =
+        "Salva movimento";
+      $("annulla").hidden = true;
+      indiceModifica = null;
+    }
+
+    function preparaModifica(indice) {
+      const movimento = movimenti[indice];
+
+      if (!movimento) {
+        return;
+      }
+
+      indiceModifica = indice;
+
+      $("tipo").value = movimento.tipo;
+      $("importo").value = movimento.importo;
+      $("descrizione").value =
+        movimento.descrizione;
+      $("data").value = movimento.data;
+      $("categoria").value =
+        movimento.categoria;
+      $("stato").value = movimento.stato;
+      $("metodo").value = movimento.metodo;
+      $("ricorrente").checked =
+        movimento.ricorrente;
+
+      $("titolo-form").textContent =
+        "Modifica movimento";
+      $("salva").textContent =
+        "Aggiorna movimento";
+      $("annulla").hidden = false;
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+
+    function eliminaMovimento(indice) {
+      if (!movimenti[indice]) {
+        return;
+      }
+
+      if (!confirm("Eliminare questo movimento?")) {
+        return;
+      }
+
+      movimenti.splice(indice, 1);
+      salva();
+      aggiorna();
+    }
+
+    $("form-movimento").addEventListener(
+      "submit",
+      evento => {
+        evento.preventDefault();
+
+        const dati = {
+          tipo: $("tipo").value,
+          importo: $("importo").value,
+          descrizione: $("descrizione").value,
+          data: $("data").value,
+          categoria: $("categoria").value,
+          stato: $("stato").value,
+          metodo: $("metodo").value,
+          ricorrente: $("ricorrente").checked
+        };
+
+        if (
+          !dati.importo ||
+          Number(dati.importo) <= 0 ||
+          !dati.descrizione.trim() ||
+          !dati.data
+        ) {
+          $("messaggio").textContent =
+            "Compila descrizione, importo e data.";
+          return;
+        }
+
+        const movimento =
+          creaMovimento(dati);
+
+        if (indiceModifica === null) {
+          movimenti.push(movimento);
+          $("messaggio").textContent =
+            "Movimento salvato.";
+        } else {
+          movimento.id =
+            movimenti[indiceModifica].id;
+          movimento.creatoIl =
+            movimenti[indiceModifica].creatoIl;
+          movimenti[indiceModifica] =
+            movimento;
+          $("messaggio").textContent =
+            "Movimento aggiornato.";
+        }
+
+        salva();
+        pulisciForm();
+        aggiorna();
+      }
+    );
+
+    $("annulla").onclick = () => {
+      pulisciForm();
+      $("messaggio").textContent =
+        "Modifica annullata.";
+    };
+
+    $("ricerca").oninput = aggiornaElenco;
+    $("filtro-tipo").onchange = aggiornaElenco;
+    $("filtro-stato").onchange = aggiornaElenco;
+
+    $("esporta").onclick = () => {
+      const contenuto = JSON.stringify(
+        movimenti,
+        null,
+        2
+      );
+
+      const file = new Blob(
+        [contenuto],
+        { type: "application/json" }
+      );
+
+      const url =
+        URL.createObjectURL(file);
+
+      const link =
+        document.createElement("a");
+
+      link.href = url;
+      link.download =
+        "backup-gestione-plus.json";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    };
+
+    $("importa").onclick = () => {
+      $("file").click();
+    };
+
+    $("file").onchange = evento => {
+      const file =
+        evento.target.files[0];
+
+      if (!file) {
+        return;
+      }
+
+      const lettore =
+        new FileReader();
+
+      lettore.onload = () => {
+        try {
+          const importati =
+            JSON.parse(lettore.result);
+
+          if (!Array.isArray(importati)) {
+            throw new Error(
+              "Formato non valido"
+            );
+          }
+
+          const validi = importati
+            .filter(m =>
+              m &&
+              typeof m === "object" &&
+              Number(m.importo) > 0 &&
+              typeof m.descrizione === "string" &&
+              typeof m.data === "string" &&
+              ["entrata", "uscita"]
+                .includes(m.tipo) &&
+              ["pagato", "da_pagare"]
+                .includes(m.stato)
+            )
+            .map(m =>
+              creaMovimento({
+                id: m.id,
+                tipo: m.tipo,
+                importo: m.importo,
+                descrizione: m.descrizione,
+                data: m.data,
+                categoria:
+                  m.categoria || "Altro",
+                stato: m.stato,
+                metodo: m.metodo || "",
+                ricorrente:
+                  Boolean(m.ricorrente),
+                creatoIl: m.creatoIl
+              })
+            );
+
+          if (!confirm(
+            `Sostituire i dati attuali con ` +
+            `${validi.length} movimenti importati?`
+          )) {
+            return;
+          }
+
+          movimenti = validi;
+          salva();
+          pulisciForm();
+          aggiorna();
+
+          $("messaggio").textContent =
+            "Backup importato.";
+        } catch (errore) {
+          console.error(errore);
+
+          $("messaggio").textContent =
+            "Il file non è un backup valido.";
+        } finally {
+          $("file").value = "";
+        }
+      };
+
+      lettore.readAsText(file);
+    };
+
+    $("data").value = oggi();
+    aggiorna();
+  </script>
+</body>
+</html>
