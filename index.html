@@ -1075,8 +1075,81 @@ function estraiImportoVoce(testo) {
     /d+(?:[.,]d{1,2})?/g
   );
 
-  if (!numeri || !numeri.length) {
-    return null;
+  if (numeri && numeri.length) {
+    return numeri[0].replace(",", ".");
+  }
+
+  const paroleNumeri = {
+    zero: 0,
+    uno: 1,
+    una: 1,
+    due: 2,
+    tre: 3,
+    quattro: 4,
+    cinque: 5,
+    sei: 6,
+    sette: 7,
+    otto: 8,
+    nove: 9,
+    dieci: 10,
+    undici: 11,
+    dodici: 12,
+    tredici: 13,
+    quattordici: 14,
+    quindici: 15,
+    sedici: 16,
+    diciassette: 17,
+    diciotto: 18,
+    diciannove: 19,
+    venti: 20,
+    trenta: 30,
+    quaranta: 40,
+    cinquanta: 50,
+    sessanta: 60,
+    settanta: 70,
+    ottanta: 80,
+    novanta: 90,
+    cento: 100
+  };
+
+  const parole = testo
+    .toLowerCase()
+    .replace(/[.,]/g, "")
+    .split(/s+/);
+
+  for (let indice = 0; indice < parole.length; indice++) {
+    const parola = parole[indice];
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        paroleNumeri,
+        parola
+      )
+    ) {
+      let valore =
+        paroleNumeri[parola];
+
+      const parolaSuccessiva =
+        parole[indice + 1];
+
+      if (
+        parolaSuccessiva &&
+        Object.prototype.hasOwnProperty.call(
+          paroleNumeri,
+          parolaSuccessiva
+        ) &&
+        valore >= 20 &&
+        valore < 100
+      ) {
+        valore +=
+          paroleNumeri[parolaSuccessiva];
+      }
+
+      return String(valore);
+}
+
+  return null;
+}
   }
 
   return numeri[0].replace(",", ".");
