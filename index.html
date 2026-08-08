@@ -970,6 +970,118 @@ Crea nuova base dell'app Gestione
       aggiorna();
     }
 
+$("voce").onclick = () => {
+  const Riconoscimento =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!Riconoscimento) {
+    $("stato-voce").textContent =
+      "Il riconoscimento vocale non è disponibile. " +
+      "Prova Chrome o Safari.";
+    return;
+  }
+
+  const riconoscimento =
+    new Riconoscimento();
+
+  riconoscimento.lang = "it-IT";
+  riconoscimento.continuous = false;
+  riconoscimento.interimResults = false;
+  riconoscimento.maxAlternatives = 1;
+
+  $("stato-voce").textContent =
+    "Ascolto in corso...";
+
+  riconoscimento.onresult = evento => {
+    const testo =
+      evento.results[0][0].transcript
+        .toLowerCase()
+        .trim();
+
+    interpretaVoce(testo);
+
+    $("stato-voce").textContent =
+      "Ho capito: " + testo;
+  };
+
+  riconoscimento.onerror = evento => {
+    $("stato-voce").textContent =
+      "Errore del microfono: " +
+      evento.error;
+  };
+
+  riconoscimento.onend = () => {
+    if (
+      $("stato-voce").textContent ===
+      "Ascolto in corso..."
+    ) {
+      $("stato-voce").textContent =
+        "Non ho ricevuto una frase.";
+    }
+  };
+
+  try {
+    riconoscimento.start();
+  } catch (errore) {
+    $("stato-voce").textContent =
+      "Impossibile avviare il microfono.";
+  }
+};
+
+function interpretaVoce(testo) {
+  $("descrizione").value = testo;
+
+  const importo =
+    estraiImportoVoce(testo);
+
+  if (importo !== null) {
+    $("importo").value = importo;
+  }
+
+  $("tipo").value =
+    /ricevuto|incassato|stipendio|entrata|guadagnato/i
+      .test(testo)
+      ? "entrata"
+      : "uscita";
+
+  $("stato").value =
+    /devo pagare|da pagare|scadenza|pagherò|pagare entro/i
+      .test(testo)
+      ? "da_pagare"
+      : "pagato";
+
+  if (/supermercato|spesa|alimentari/i.test(testo)) {
+    $("categoria").value = "Alimentari";
+  } else if (/affitto|casa|condominio/i.test(testo)) {
+    $("categoria").value = "Casa";
+  } else if (/benzina|carburante|parcheggio|auto/i.test(testo)) {
+    $("categoria").value = "Trasporti";
+  } else if (/bar|ristorante|pizzeria|cena|pranzo/i.test(testo)) {
+    $("categoria").value = "Ristorazione";
+  } else if (/luce|gas|acqua|telefono|internet|bolletta/i.test(testo)) {
+    $("categoria").value = "Utenze";
+  } else if (/stipendio|salario/i.test(testo)) {
+    $("categoria").value = "Stipendio";
+  }
+
+  if (/ogni mese|mensile|mensilmente/i.test(testo)) {
+    $("ricorrente").checked = true;
+  }
+}
+
+function estraiImportoVoce(testo) {
+  const numeri = testo.match(
+    /d+(?:[.,]d{1,2})?/g
+  );
+
+  if (!numeri || !numeri.length) {
+    return null;
+  }
+
+  return numeri[0].replace(",", ".");
+}
+    
     $("form-movimento").addEventListener(
       "submit",
       evento => {
