@@ -1,11 +1,9 @@
-Crea nuova base dell'app Gestione
 <!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123b5d">
-  <meta name="description" content="Gestione semplice delle finanze personali">
   <title>Gestione</title>
 
   <style>
@@ -40,15 +38,22 @@ Crea nuova base dell'app Gestione
       color: var(--bianco);
     }
 
+    header h1,
+    header p {
+      width: min(100%, 900px);
+      margin-right: auto;
+      margin-left: auto;
+    }
+
     header h1 {
-      max-width: 900px;
-      margin: 0 auto 6px;
+      margin-top: 0;
+      margin-bottom: 6px;
       font-size: 30px;
     }
 
     header p {
-      max-width: 900px;
-      margin: auto;
+      margin-top: 0;
+      margin-bottom: 0;
       opacity: .9;
     }
 
@@ -173,6 +178,11 @@ Crea nuova base dell'app Gestione
       transform: scale(.98);
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .6;
+    }
+
     .primary {
       background: var(--blu);
     }
@@ -274,14 +284,18 @@ Crea nuova base dell'app Gestione
       color: var(--rosso);
     }
 
-    .avviso {
-      color: var(--arancio);
-    }
-
     .vuoto,
     .stato {
       color: var(--secondario);
       font-size: 14px;
+    }
+
+    .stato.errore {
+      color: var(--rosso);
+    }
+
+    .stato.successo {
+      color: var(--verde);
     }
 
     .barra-riga {
@@ -291,6 +305,7 @@ Crea nuova base dell'app Gestione
     .barra-testo {
       display: flex;
       justify-content: space-between;
+      gap: 10px;
       margin-bottom: 5px;
       font-size: 14px;
     }
@@ -318,6 +333,10 @@ Crea nuova base dell'app Gestione
       display: none;
     }
 
+    .voce-attiva {
+      background: var(--rosso);
+    }
+
     @media (max-width: 700px) {
       .dashboard {
         grid-template-columns: 1fr 1fr;
@@ -337,7 +356,7 @@ Crea nuova base dell'app Gestione
       }
 
       .destra {
-        max-width: 45%;
+        max-width: 48%;
       }
     }
   </style>
@@ -380,14 +399,14 @@ Crea nuova base dell'app Gestione
       <h2 id="titolo-form">Aggiungi movimento</h2>
 
       <form id="form-movimento">
-        <button
-  id="voce"
-  class="secondary"
-  type="button">
-  🎙️ Inserisci con la voce
-</button>
+        <button id="voce" class="secondary" type="button">
+          🎙️ Inserisci con la voce
+        </button>
 
-<p id="stato-voce" class="stato"></p>
+        <p id="stato-voce" class="stato">
+          Tocca il pulsante e pronuncia una frase.
+        </p>
+
         <div class="form-grid">
           <label>
             Tipo
@@ -404,6 +423,7 @@ Crea nuova base dell'app Gestione
               type="number"
               min="0.01"
               step="0.01"
+              inputmode="decimal"
               placeholder="0,00"
               required>
           </label>
@@ -459,7 +479,9 @@ Crea nuova base dell'app Gestione
               <option value="Contanti">Contanti</option>
               <option value="Carta">Carta</option>
               <option value="Bonifico">Bonifico</option>
-              <option value="Addebito diretto">Addebito diretto</option>
+              <option value="Addebito diretto">
+                Addebito diretto
+              </option>
             </select>
           </label>
 
@@ -523,10 +545,7 @@ Crea nuova base dell'app Gestione
           Esporta JSON
         </button>
 
-        <button
-          id="importa"
-          class="secondary"
-          type="button">
+        <button id="importa" class="secondary" type="button">
           Importa JSON
         </button>
       </div>
@@ -538,131 +557,155 @@ Crea nuova base dell'app Gestione
         accept="application/json">
 
       <p class="stato">
-        I dati di questa prima versione sono salvati nel browser.
+        I dati vengono salvati nel browser di questo dispositivo.
       </p>
     </section>
   </main>
 
   <script>
-    const CHIAVE = "gestione_plus_movimenti_v1";
+    const CHIAVE = "gestione_plus_movimenti_v3";
 
-    let movimenti = carica();
-
+    let movimenti = caricaMovimenti();
     let indiceModifica = null;
+    let riconoscimentoAttivo = null;
 
-    const $ = id =>
-      document.getElementById(id);
+    const $ = id => document.getElementById(id);
 
     function oggi() {
       const data = new Date();
       const anno = data.getFullYear();
-      const mese = String(
-        data.getMonth() + 1
-      ).padStart(2, "0");
-      const giorno = String(
-        data.getDate()
-      ).padStart(2, "0");
+      const mese = String(data.getMonth() + 1).padStart(2, "0");
+      const giorno = String(data.getDate()).padStart(2, "0");
 
       return `${anno}-${mese}-${giorno}`;
     }
 
     function euro(valore) {
-      return Number(valore || 0).toLocaleString(
-        "it-IT",
-        {
-          style: "currency",
-          currency: "EUR"
-        }
-      );
+      return Number(valore || 0).toLocaleString("it-IT", {
+        style: "currency",
+        currency: "EUR"
+      });
     }
 
-    function carica() {
+    function caricaMovimenti() {
       try {
         const dati = JSON.parse(
           localStorage.getItem(CHIAVE) || "[]"
         );
 
-        return Array.isArray(dati)
-          ? dati
-          : [];
-      } catch (errore) {
-        console.error(
-          "Dati locali non validi:",
-          errore
-        );
+        if (!Array.isArray(dati)) {
+          return [];
+        }
 
+        return dati
+          .filter(movimento =>
+            movimento &&
+            Number(movimento.importo) > 0 &&
+            typeof movimento.data === "string" &&
+            ["entrata", "uscita"].includes(movimento.tipo)
+          )
+          .map(normalizzaMovimento);
+      } catch (errore) {
+        console.error("Errore lettura dati:", errore);
         return [];
       }
     }
 
-    function salva() {
-      localStorage.setItem(
-        CHIAVE,
-        JSON.stringify(movimenti)
-      );
+    function salvaMovimenti() {
+      try {
+        localStorage.setItem(
+          CHIAVE,
+          JSON.stringify(movimenti)
+        );
+        return true;
+      } catch (errore) {
+        console.error("Errore salvataggio dati:", errore);
+        mostraMessaggio(
+          "Impossibile salvare i dati.",
+          "errore"
+        );
+        return false;
+      }
     }
 
-    function creaMovimento(dati) {
+    function normalizzaMovimento(dati) {
       return {
         id: dati.id || (
           Date.now() + "-" +
           Math.random().toString(16).slice(2)
         ),
-        tipo: dati.tipo,
+        tipo: dati.tipo === "entrata"
+          ? "entrata"
+          : "uscita",
         importo: Number(dati.importo),
-        descrizione: dati.descrizione.trim(),
-        data: dati.data,
-        categoria: dati.categoria,
-        stato: dati.stato,
-        metodo: dati.metodo,
+        descrizione: String(
+          dati.descrizione || ""
+        ).trim().slice(0, 120),
+        data: String(dati.data || oggi()),
+        categoria: String(
+          dati.categoria || "Altro"
+        ).slice(0, 60),
+        stato: dati.stato === "da_pagare"
+          ? "da_pagare"
+          : "pagato",
+        metodo: String(
+          dati.metodo || ""
+        ).slice(0, 60),
         ricorrente: Boolean(dati.ricorrente),
         creatoIl: dati.creatoIl ||
           new Date().toISOString(),
-        aggiornatoIl:
-          new Date().toISOString()
+        aggiornatoIl: new Date().toISOString()
       };
+    }
+
+    function mostraMessaggio(testo, tipo = "") {
+      const elemento = $("messaggio");
+      elemento.textContent = testo;
+      elemento.className = "stato " + tipo;
     }
 
     function aggiornaDashboard() {
       const mese = oggi().slice(0, 7);
 
       const entrate = movimenti
-        .filter(m =>
-          m.tipo === "entrata" &&
-          m.data.startsWith(mese)
+        .filter(movimento =>
+          movimento.tipo === "entrata" &&
+          movimento.data.startsWith(mese)
         )
-        .reduce((totale, m) =>
-          totale + Number(m.importo), 0);
+        .reduce(
+          (totale, movimento) =>
+            totale + movimento.importo,
+          0
+        );
 
       const uscite = movimenti
-        .filter(m =>
-          m.tipo === "uscita" &&
-          m.stato === "pagato" &&
-          m.data.startsWith(mese)
+        .filter(movimento =>
+          movimento.tipo === "uscita" &&
+          movimento.stato === "pagato" &&
+          movimento.data.startsWith(mese)
         )
-        .reduce((totale, m) =>
-          totale + Number(m.importo), 0);
+        .reduce(
+          (totale, movimento) =>
+            totale + movimento.importo,
+          0
+        );
 
       const scadenze = movimenti
-        .filter(m =>
-          m.tipo === "uscita" &&
-          m.stato === "da_pagare" &&
-          m.data >= oggi()
+        .filter(movimento =>
+          movimento.tipo === "uscita" &&
+          movimento.stato === "da_pagare" &&
+          movimento.data >= oggi()
         )
-        .reduce((totale, m) =>
-          totale + Number(m.importo), 0);
+        .reduce(
+          (totale, movimento) =>
+            totale + movimento.importo,
+          0
+        );
 
-      $("saldo").textContent =
-        euro(entrate - uscite);
-
-      $("entrate").textContent =
-        euro(entrate);
-
-      $("uscite").textContent =
-        euro(uscite);
-
-      $("scadenze").textContent =
-        euro(scadenze);
+      $("saldo").textContent = euro(entrate - uscite);
+      $("entrate").textContent = euro(entrate);
+      $("uscite").textContent = euro(uscite);
+      $("scadenze").textContent = euro(scadenze);
 
       aggiornaStatistiche(entrate, uscite);
     }
@@ -672,18 +715,18 @@ Crea nuova base dell'app Gestione
       const categorie = {};
 
       movimenti
-        .filter(m =>
-          m.tipo === "uscita" &&
-          m.stato === "pagato" &&
-          m.data.startsWith(mese)
+        .filter(movimento =>
+          movimento.tipo === "uscita" &&
+          movimento.stato === "pagato" &&
+          movimento.data.startsWith(mese)
         )
-        .forEach(m => {
+        .forEach(movimento => {
           const categoria =
-            m.categoria || "Altro";
+            movimento.categoria || "Altro";
 
           categorie[categoria] =
             (categorie[categoria] || 0) +
-            Number(m.importo);
+            movimento.importo;
         });
 
       const ordinate = Object.entries(categorie)
@@ -694,12 +737,15 @@ Crea nuova base dell'app Gestione
         <div class="barra-riga">
           <div class="barra-testo">
             <span>Entrate del mese</span>
-            <strong class="positivo">${euro(entrate)}</strong>
+            <strong class="positivo">
+              ${euro(entrate)}
+            </strong>
           </div>
           <div class="barra">
             <div
               class="barra-piena"
-              style="width:${entrate ? 100 : 0}%;background:#18794e">
+              style="width:${entrate ? 100 : 0}%;
+              background:#18794e">
             </div>
           </div>
         </div>
@@ -707,12 +753,15 @@ Crea nuova base dell'app Gestione
         <div class="barra-riga">
           <div class="barra-testo">
             <span>Uscite del mese</span>
-            <strong class="negativo">${euro(uscite)}</strong>
+            <strong class="negativo">
+              ${euro(uscite)}
+            </strong>
           </div>
           <div class="barra">
             <div
               class="barra-piena"
-              style="width:${uscite ? 100 : 0}%;background:#b42318">
+              style="width:${uscite ? 100 : 0}%;
+              background:#b42318">
             </div>
           </div>
         </div>
@@ -721,7 +770,7 @@ Crea nuova base dell'app Gestione
       if (!ordinate.length) {
         html += `
           <p class="vuoto">
-            Inserisci alcuni movimenti per vedere le statistiche.
+            Inserisci movimenti per vedere le statistiche.
           </p>
         `;
       } else {
@@ -733,7 +782,7 @@ Crea nuova base dell'app Gestione
           html += `
             <div class="barra-riga">
               <div class="barra-testo">
-                <span>${testoSicuro(categoria)}</span>
+                <span>${sicuro(categoria)}</span>
                 <strong>${euro(valore)}</strong>
               </div>
               <div class="barra">
@@ -750,7 +799,7 @@ Crea nuova base dell'app Gestione
       $("statistiche").innerHTML = html;
     }
 
-    function testoSicuro(valore) {
+    function sicuro(valore) {
       return String(valore)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -765,8 +814,8 @@ Crea nuova base dell'app Gestione
         .toLowerCase()
         .trim();
 
-      const tipo = $("filtro-tipo").value;
-      const stato = $("filtro-stato").value;
+      const filtroTipo = $("filtro-tipo").value;
+      const filtroStato = $("filtro-stato").value;
 
       const filtrati = movimenti
         .map((movimento, indice) => ({
@@ -782,27 +831,20 @@ Crea nuova base dell'app Gestione
             .join(" ")
             .toLowerCase();
 
-          const corrispondeRicerca =
-            testo.includes(ricerca);
-
-          const corrispondeTipo =
-            tipo === "tutti" ||
-            movimento.tipo === tipo;
-
-          const corrispondeStato =
-            stato === "tutti" ||
-            movimento.stato === stato;
-
           return (
-            corrispondeRicerca &&
-            corrispondeTipo &&
-            corrispondeStato
+            testo.includes(ricerca) &&
+            (
+              filtroTipo === "tutti" ||
+              movimento.tipo === filtroTipo
+            ) &&
+            (
+              filtroStato === "tutti" ||
+              movimento.stato === filtroStato
+            )
           );
         })
         .sort((a, b) =>
-          b.movimento.data.localeCompare(
-            a.movimento.data
-          )
+          b.movimento.data.localeCompare(a.movimento.data)
         );
 
       const elenco = $("elenco");
@@ -815,27 +857,21 @@ Crea nuova base dell'app Gestione
       }
 
       filtrati.forEach(({ movimento, indice }) => {
-        const riga =
-          document.createElement("div");
+        const riga = document.createElement("div");
         riga.className = "movimento";
 
-        const principale =
-          document.createElement("div");
+        const principale = document.createElement("div");
         principale.className = "movimento-main";
 
-        const titolo =
-          document.createElement("div");
+        const titolo = document.createElement("div");
         titolo.className = "titolo";
         titolo.textContent =
-          movimento.descrizione ||
-          "Senza descrizione";
+          movimento.descrizione || "Senza descrizione";
 
-        const info =
-          document.createElement("div");
+        const info = document.createElement("div");
         info.className = "info";
 
-        const stato = movimento.stato ===
-          "da_pagare"
+        const stato = movimento.stato === "da_pagare"
           ? "Da pagare"
           : "Pagato";
 
@@ -854,12 +890,10 @@ Crea nuova base dell'app Gestione
         principale.appendChild(titolo);
         principale.appendChild(info);
 
-        const destra =
-          document.createElement("div");
+        const destra = document.createElement("div");
         destra.className = "destra";
 
-        const valore =
-          document.createElement("div");
+        const valore = document.createElement("div");
         valore.className =
           "importo " +
           (
@@ -875,20 +909,17 @@ Crea nuova base dell'app Gestione
               : "-"
           ) + euro(movimento.importo);
 
-        const azioni =
-          document.createElement("div");
+        const azioni = document.createElement("div");
         azioni.className = "azioni";
 
-        const modifica =
-          document.createElement("button");
+        const modifica = document.createElement("button");
         modifica.className = "edit";
         modifica.type = "button";
         modifica.textContent = "Modifica";
         modifica.onclick = () =>
           preparaModifica(indice);
 
-        const elimina =
-          document.createElement("button");
+        const elimina = document.createElement("button");
         elimina.className = "danger";
         elimina.type = "button";
         elimina.textContent = "Elimina";
@@ -934,20 +965,19 @@ Crea nuova base dell'app Gestione
 
       $("tipo").value = movimento.tipo;
       $("importo").value = movimento.importo;
-      $("descrizione").value =
-        movimento.descrizione;
+      $("descrizione").value = movimento.descrizione;
       $("data").value = movimento.data;
-      $("categoria").value =
-        movimento.categoria;
+      $("categoria").value = movimento.categoria;
       $("stato").value = movimento.stato;
       $("metodo").value = movimento.metodo;
-      $("ricorrente").checked =
-        movimento.ricorrente;
+      $("ricorrente").checked = movimento.ricorrente;
 
       $("titolo-form").textContent =
         "Modifica movimento";
+
       $("salva").textContent =
         "Aggiorna movimento";
+
       $("annulla").hidden = false;
 
       window.scrollTo({
@@ -966,257 +996,356 @@ Crea nuova base dell'app Gestione
       }
 
       movimenti.splice(indice, 1);
-      salva();
+      salvaMovimenti();
       aggiorna();
+
+      mostraMessaggio(
+        "Movimento eliminato.",
+        "successo"
+      );
     }
 
-$("voce").onclick = () => {
-  const Riconoscimento =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+    function estraiImportoVoce(testo) {
+      const numeri = testo.match(
+        /d+(?:[.,]d{1,2})?/g
+      );
 
-  if (!Riconoscimento) {
-    $("stato-voce").textContent =
-      "Il riconoscimento vocale non è disponibile. " +
-      "Prova Chrome o Safari.";
-    return;
-  }
-
-  const riconoscimento =
-    new Riconoscimento();
-
-  riconoscimento.lang = "it-IT";
-  riconoscimento.continuous = false;
-  riconoscimento.interimResults = false;
-  riconoscimento.maxAlternatives = 1;
-
-  $("stato-voce").textContent =
-    "Ascolto in corso...";
-
-  riconoscimento.onresult = evento => {
-    const testo =
-      evento.results[0][0].transcript
-        .toLowerCase()
-        .trim();
-
-    interpretaVoce(testo);
-
-    $("stato-voce").textContent =
-      "Ho capito: " + testo;
-  };
-
-  riconoscimento.onerror = evento => {
-    $("stato-voce").textContent =
-      "Errore del microfono: " +
-      evento.error;
-  };
-
-  riconoscimento.onend = () => {
-    if (
-      $("stato-voce").textContent ===
-      "Ascolto in corso..."
-    ) {
-      $("stato-voce").textContent =
-        "Non ho ricevuto una frase.";
-    }
-  };
-
-  try {
-    riconoscimento.start();
-  } catch (errore) {
-    $("stato-voce").textContent =
-      "Impossibile avviare il microfono.";
-  }
-};
-
-function interpretaVoce(testo) {
-  $("descrizione").value = testo;
-
-  const importo =
-    estraiImportoVoce(testo);
-
-  if (importo !== null) {
-    $("importo").value = importo;
-  }
-
-  $("tipo").value =
-    /ricevuto|incassato|stipendio|entrata|guadagnato/i
-      .test(testo)
-      ? "entrata"
-      : "uscita";
-
-  $("stato").value =
-    /devo pagare|da pagare|scadenza|pagherò|pagare entro/i
-      .test(testo)
-      ? "da_pagare"
-      : "pagato";
-
-  if (/supermercato|spesa|alimentari/i.test(testo)) {
-    $("categoria").value = "Alimentari";
-  } else if (/affitto|casa|condominio/i.test(testo)) {
-    $("categoria").value = "Casa";
-  } else if (/benzina|carburante|parcheggio|auto/i.test(testo)) {
-    $("categoria").value = "Trasporti";
-  } else if (/bar|ristorante|pizzeria|cena|pranzo/i.test(testo)) {
-    $("categoria").value = "Ristorazione";
-  } else if (/luce|gas|acqua|telefono|internet|bolletta/i.test(testo)) {
-    $("categoria").value = "Utenze";
-  } else if (/stipendio|salario/i.test(testo)) {
-    $("categoria").value = "Stipendio";
-  }
-
-  if (/ogni mese|mensile|mensilmente/i.test(testo)) {
-    $("ricorrente").checked = true;
-  }
-}
-
-function estraiImportoVoce(testo) {
-  const numeri = testo.match(
-    /d+(?:[.,]d{1,2})?/g
-  );
-
-  if (numeri && numeri.length) {
-    return numeri[0].replace(",", ".");
-  }
-
-  const paroleNumeri = {
-    zero: 0,
-    uno: 1,
-    una: 1,
-    due: 2,
-    tre: 3,
-    quattro: 4,
-    cinque: 5,
-    sei: 6,
-    sette: 7,
-    otto: 8,
-    nove: 9,
-    dieci: 10,
-    undici: 11,
-    dodici: 12,
-    tredici: 13,
-    quattordici: 14,
-    quindici: 15,
-    sedici: 16,
-    diciassette: 17,
-    diciotto: 18,
-    diciannove: 19,
-    venti: 20,
-    trenta: 30,
-    quaranta: 40,
-    cinquanta: 50,
-    sessanta: 60,
-    settanta: 70,
-    ottanta: 80,
-    novanta: 90,
-    cento: 100
-  };
-
-  const parole = testo
-    .toLowerCase()
-    .replace(/[.,]/g, "")
-    .split(/s+/);
-
-  for (let indice = 0; indice < parole.length; indice++) {
-    const parola = parole[indice];
-
-    if (
-      Object.prototype.hasOwnProperty.call(
-        paroleNumeri,
-        parola
-      )
-    ) {
-      let valore =
-        paroleNumeri[parola];
-
-      const parolaSuccessiva =
-        parole[indice + 1];
-
-      if (
-        parolaSuccessiva &&
-        Object.prototype.hasOwnProperty.call(
-          paroleNumeri,
-          parolaSuccessiva
-        ) &&
-        valore >= 20 &&
-        valore < 100
-      ) {
-        valore +=
-          paroleNumeri[parolaSuccessiva];
+      if (numeri && numeri.length) {
+        return numeri[0].replace(",", ".");
       }
 
-      return String(valore);
-}
+      const numeriParole = {
+        zero: 0,
+        uno: 1,
+        una: 1,
+        un: 1,
+        due: 2,
+        tre: 3,
+        quattro: 4,
+        cinque: 5,
+        sei: 6,
+        sette: 7,
+        otto: 8,
+        nove: 9,
+        dieci: 10,
+        undici: 11,
+        dodici: 12,
+        tredici: 13,
+        quattordici: 14,
+        quindici: 15,
+        sedici: 16,
+        diciassette: 17,
+        diciotto: 18,
+        diciannove: 19,
+        venti: 20,
+        trenta: 30,
+        quaranta: 40,
+        cinquanta: 50,
+        sessanta: 60,
+        settanta: 70,
+        ottanta: 80,
+        novanta: 90,
+        cento: 100
+      };
 
-  return null;
-}
-  }
+      const parole = testo
+        .toLowerCase()
+        .replace(/[.,]/g, "")
+        .split(/s+/);
 
-  return numeri[0].replace(",", ".");
-}
-    
+      for (let i = 0; i < parole.length; i++) {
+        const parola = parole[i];
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            numeriParole,
+            parola
+          )
+        ) {
+          let valore = numeriParole[parola];
+          const successiva = parole[i + 1];
+
+          if (
+            successiva &&
+            Object.prototype.hasOwnProperty.call(
+              numeriParole,
+              successiva
+            ) &&
+            valore >= 20 &&
+            valore < 100
+          ) {
+            valore += numeriParole[successiva];
+          }
+
+          return String(valore);
+        }
+      }
+
+      return null;
+    }
+
+    function categoriaDaTesto(testo) {
+      if (/supermercato|spesa|alimentari/i.test(testo)) {
+        return "Alimentari";
+      }
+
+      if (/affitto|casa|condominio/i.test(testo)) {
+        return "Casa";
+      }
+
+      if (/benzina|carburante|parcheggio|auto/i.test(testo)) {
+        return "Trasporti";
+      }
+
+      if (/bar|ristorante|pizzeria|cena|pranzo/i.test(testo)) {
+        return "Ristorazione";
+      }
+
+      if (/luce|gas|acqua|telefono|internet|bolletta/i.test(testo)) {
+        return "Utenze";
+      }
+
+      if (/medico|farmacia|salute|dentista/i.test(testo)) {
+        return "Salute";
+      }
+
+      if (/stipendio|salario|paga/i.test(testo)) {
+        return "Stipendio";
+      }
+
+      return "Altro";
+    }
+
+    function interpretaVoce(testo) {
+      $("descrizione").value = testo;
+
+      const importo = estraiImportoVoce(testo);
+
+      if (importo !== null) {
+        $("importo").value = importo;
+      }
+
+      $("tipo").value =
+        /ricevuto|incassato|stipendio|entrata|guadagnato|salario/i
+          .test(testo)
+          ? "entrata"
+          : "uscita";
+
+      $("stato").value =
+        /devo pagare|da pagare|scadenza|pagherò|pagare entro/i
+          .test(testo)
+          ? "da_pagare"
+          : "pagato";
+
+      $("categoria").value =
+        categoriaDaTesto(testo);
+
+      $("data").value = oggi();
+
+      if (/ogni mese|mensile|mensilmente/i.test(testo)) {
+        $("ricorrente").checked = true;
+      }
+    }
+
+    $("voce").addEventListener("click", () => {
+      const Costruttore =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+      if (!Costruttore) {
+        $("stato-voce").textContent =
+          "Riconoscimento vocale non supportato. " +
+          "Prova Chrome o Safari.";
+        $("stato-voce").className = "stato errore";
+        return;
+      }
+
+      if (riconoscimentoAttivo) {
+        try {
+          riconoscimentoAttivo.stop();
+        } catch (errore) {
+          console.warn(errore);
+        }
+
+        riconoscimentoAttivo = null;
+        $("voce").classList.remove("voce-attiva");
+        $("stato-voce").textContent =
+          "Ascolto interrotto.";
+        return;
+      }
+
+      const riconoscimento = new Costruttore();
+      riconoscimentoAttivo = riconoscimento;
+
+      riconoscimento.lang = "it-IT";
+      riconoscimento.continuous = false;
+      riconoscimento.interimResults = false;
+      riconoscimento.maxAlternatives = 1;
+
+      $("voce").classList.add("voce-attiva");
+      $("stato-voce").textContent =
+        "Ascolto in corso. Parla ora.";
+      $("stato-voce").className = "stato";
+
+      riconoscimento.onresult = evento => {
+        const risultato =
+          evento.results &&
+          evento.results[0] &&
+          evento.results[0][0];
+
+        if (!risultato) {
+          $("stato-voce").textContent =
+            "Non ho capito la frase.";
+          $("stato-voce").className =
+            "stato errore";
+          return;
+        }
+
+        const testo = risultato.transcript
+          .toLowerCase()
+          .trim();
+
+        interpretaVoce(testo);
+
+        $("stato-voce").textContent =
+          "Ho capito: " + testo;
+        $("stato-voce").className =
+          "stato successo";
+      };
+
+      riconoscimento.onerror = evento => {
+        const messaggi = {
+          "not-allowed":
+            "Permesso microfono negato.",
+          "audio-capture":
+            "Microfono non disponibile.",
+          "no-speech":
+            "Non ho rilevato la voce.",
+          "network":
+            "Errore di rete.",
+          "service-not-allowed":
+            "Servizio vocale non disponibile."
+        };
+
+        $("stato-voce").textContent =
+          messaggi[evento.error] ||
+          "Errore microfono: " + evento.error;
+
+        $("stato-voce").className =
+          "stato errore";
+      };
+
+      riconoscimento.onend = () => {
+        riconoscimentoAttivo = null;
+        $("voce").classList.remove("voce-attiva");
+
+        if (
+          $("stato-voce").textContent ===
+          "Ascolto in corso. Parla ora."
+        ) {
+          $("stato-voce").textContent =
+            "Non ho ricevuto una frase.";
+        }
+      };
+
+      try {
+        riconoscimento.start();
+      } catch (errore) {
+        riconoscimentoAttivo = null;
+        $("voce").classList.remove("voce-attiva");
+
+        $("stato-voce").textContent =
+          "Impossibile avviare il microfono.";
+        $("stato-voce").className =
+          "stato errore";
+      }
+    });
+
     $("form-movimento").addEventListener(
       "submit",
       evento => {
         evento.preventDefault();
 
-        const dati = {
+        const importo = Number(
+          $("importo").value
+        );
+
+        const descrizione =
+          $("descrizione").value.trim();
+
+        if (
+          !Number.isFinite(importo) ||
+          importo <= 0 ||
+          !descrizione ||
+          !$("data").value
+        ) {
+          mostraMessaggio(
+            "Compila descrizione, importo e data.",
+            "errore"
+          );
+          return;
+        }
+
+        const movimento = normalizzaMovimento({
           tipo: $("tipo").value,
-          importo: $("importo").value,
-          descrizione: $("descrizione").value,
+          importo,
+          descrizione,
           data: $("data").value,
           categoria: $("categoria").value,
           stato: $("stato").value,
           metodo: $("metodo").value,
           ricorrente: $("ricorrente").checked
-        };
-
-        if (
-          !dati.importo ||
-          Number(dati.importo) <= 0 ||
-          !dati.descrizione.trim() ||
-          !dati.data
-        ) {
-          $("messaggio").textContent =
-            "Compila descrizione, importo e data.";
-          return;
-        }
-
-        const movimento =
-          creaMovimento(dati);
+        });
 
         if (indiceModifica === null) {
           movimenti.push(movimento);
-          $("messaggio").textContent =
-            "Movimento salvato.";
+          mostraMessaggio(
+            "Movimento salvato.",
+            "successo"
+          );
         } else {
           movimento.id =
             movimenti[indiceModifica].id;
+
           movimento.creatoIl =
             movimenti[indiceModifica].creatoIl;
+
           movimenti[indiceModifica] =
             movimento;
-          $("messaggio").textContent =
-            "Movimento aggiornato.";
+
+          mostraMessaggio(
+            "Movimento aggiornato.",
+            "successo"
+          );
         }
 
-        salva();
+        salvaMovimenti();
         pulisciForm();
         aggiorna();
       }
     );
 
-    $("annulla").onclick = () => {
+    $("annulla").addEventListener("click", () => {
       pulisciForm();
-      $("messaggio").textContent =
-        "Modifica annullata.";
-    };
+      mostraMessaggio("Modifica annullata.");
+    });
 
-    $("ricerca").oninput = aggiornaElenco;
-    $("filtro-tipo").onchange = aggiornaElenco;
-    $("filtro-stato").onchange = aggiornaElenco;
+    $("ricerca").addEventListener(
+      "input",
+      aggiornaElenco
+    );
 
-    $("esporta").onclick = () => {
+    $("filtro-tipo").addEventListener(
+      "change",
+      aggiornaElenco
+    );
+
+    $("filtro-stato").addEventListener(
+      "change",
+      aggiornaElenco
+    );
+
+    $("esporta").addEventListener("click", () => {
       const contenuto = JSON.stringify(
         movimenti,
         null,
@@ -1225,104 +1354,109 @@ function estraiImportoVoce(testo) {
 
       const file = new Blob(
         [contenuto],
-        { type: "application/json" }
+        {
+          type: "application/json"
+        }
       );
 
-      const url =
-        URL.createObjectURL(file);
-
-      const link =
-        document.createElement("a");
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
 
       link.href = url;
-      link.download =
-        "backup-gestione-plus.json";
+      link.download = "backup-gestione.json";
+      document.body.appendChild(link);
       link.click();
+      link.remove();
 
-      URL.revokeObjectURL(url);
-    };
+      setTimeout(
+        () => URL.revokeObjectURL(url),
+        1000
+      );
+    });
 
-    $("importa").onclick = () => {
-      $("file").click();
-    };
+    $("importa").addEventListener(
+      "click",
+      () => $("file").click()
+    );
 
-    $("file").onchange = evento => {
-      const file =
-        evento.target.files[0];
+    $("file").addEventListener(
+      "change",
+      evento => {
+        const file = evento.target.files[0];
 
-      if (!file) {
-        return;
-      }
-
-      const lettore =
-        new FileReader();
-
-      lettore.onload = () => {
-        try {
-          const importati =
-            JSON.parse(lettore.result);
-
-          if (!Array.isArray(importati)) {
-            throw new Error(
-              "Formato non valido"
-            );
-          }
-
-          const validi = importati
-            .filter(m =>
-              m &&
-              typeof m === "object" &&
-              Number(m.importo) > 0 &&
-              typeof m.descrizione === "string" &&
-              typeof m.data === "string" &&
-              ["entrata", "uscita"]
-                .includes(m.tipo) &&
-              ["pagato", "da_pagare"]
-                .includes(m.stato)
-            )
-            .map(m =>
-              creaMovimento({
-                id: m.id,
-                tipo: m.tipo,
-                importo: m.importo,
-                descrizione: m.descrizione,
-                data: m.data,
-                categoria:
-                  m.categoria || "Altro",
-                stato: m.stato,
-                metodo: m.metodo || "",
-                ricorrente:
-                  Boolean(m.ricorrente),
-                creatoIl: m.creatoIl
-              })
-            );
-
-          if (!confirm(
-            `Sostituire i dati attuali con ` +
-            `${validi.length} movimenti importati?`
-          )) {
-            return;
-          }
-
-          movimenti = validi;
-          salva();
-          pulisciForm();
-          aggiorna();
-
-          $("messaggio").textContent =
-            "Backup importato.";
-        } catch (errore) {
-          console.error(errore);
-
-          $("messaggio").textContent =
-            "Il file non è un backup valido.";
-        } finally {
-          $("file").value = "";
+        if (!file) {
+          return;
         }
-      };
 
-      lettore.readAsText(file);
-    };
+        const lettore = new FileReader();
+
+        lettore.onload = () => {
+          try {
+            const importati = JSON.parse(
+              lettore.result
+            );
+
+            if (!Array.isArray(importati)) {
+              throw new Error(
+                "Backup non valido"
+              );
+            }
+
+            const validi = importati
+              .filter(movimento =>
+                movimento &&
+                Number(movimento.importo) > 0 &&
+                typeof movimento.data === "string" &&
+                ["entrata", "uscita"].includes(
+                  movimento.tipo
+                )
+              )
+              .map(normalizzaMovimento);
+
+            if (!confirm(
+              "Sostituire i dati attuali con " +
+              validi.length +
+              " movimenti?"
+            )) {
+              return;
+            }
+
+            movimenti = validi;
+            salvaMovimenti();
+            pulisciForm();
+            aggiorna();
+
+            mostraMessaggio(
+              "Backup importato.",
+              "successo"
+            );
+          } catch (errore) {
+            console.error(
+              "Errore importazione:",
+              errore
+            );
+
+            mostraMessaggio(
+              "Il file non è un backup valido.",
+              "errore"
+            );
+          } finally {
+            $("file").value = "";
+          }
+        };
+
+        lettore.onerror = () => {
+          mostraMessaggio(
+            "Impossibile leggere il file.",
+            "errore"
+          );
+
+          $("file").value = "";
+        };
+
+        lettore.readAsText(file);
+      }
+    );
 
     $("data").value = oggi();
     aggiorna();
